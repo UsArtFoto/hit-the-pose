@@ -177,7 +177,7 @@ details.dev input,details.dev select{grid-column:1/-1;accent-color:var(--amber)}
       </details>
     </aside>
   </main>
-  <p class="foot"><span id="modelCredit">Figure and reference cards are drawn guides.</span> Example photos: Jane Allan, <a href="https://thelenslounge.com/female-photography-standing-poses/" target="_blank" rel="noopener">The Lens Lounge, “49 best female standing poses”</a>, class use only (local build). Pose cards traced from those photos with MediaPipe and checked by hand by Russell McCord. Posing rules from Hurter, Gomez and Benjamin (credited by page) and the posing teachers in <code>posing-masters-research.md</code>. Concept and direction: Russell McCord · code: Claude.</p>
+  <p class="foot"><span id="modelCredit">Figure and reference cards are drawn guides.</span> Example photos: Jane Allan, <a href="https://thelenslounge.com/female-photography-standing-poses/" target="_blank" rel="noopener">The Lens Lounge, “49 best female standing poses”</a>, shown for educational use with citation. Pose cards traced from those photos with MediaPipe and checked by hand by Russell McCord. Posing rules from Hurter, Gomez and Benjamin (credited by page) and the posing teachers in <code>posing-masters-research.md</code>. Concept and direction: Russell McCord · code: Claude.</p>
 </div>
 
 <div class="ov" id="ovTitle">
@@ -774,9 +774,9 @@ const EXAMPLES={}; // filled from assets/reference-photos/book/examples.json: {k
 fetch('./assets/reference-photos/book/examples.json?v='+Date.now()).then(r=>r.ok?r.json():{}).then(j=>Object.assign(EXAMPLES,j)).catch(()=>{});
 function showExample(key){
   const box=$('rEx'),src=$('rExSrc'),own=new Image();
-  box.innerHTML='<div class="none">Example photo is in the class build.<br><a href="https://thelenslounge.com/female-photography-standing-poses/" target="_blank" rel="noopener">See the pose on The Lens Lounge</a></div>';src.textContent='Example: Jane Allan, The Lens Lounge.';$('rExCap').textContent='Real example';
+  box.innerHTML='<div class="none">Example photo did not load.<br><a href="https://thelenslounge.com/female-photography-standing-poses/" target="_blank" rel="noopener">See the pose on The Lens Lounge</a></div>';src.textContent='Example: Jane Allan, The Lens Lounge.';$('rExCap').textContent='Real example';
   own.onload=()=>{box.innerHTML='';box.append(own);$('rExCap').textContent='Real example (Russ)';};
-  own.onerror=()=>{const e=EXAMPLES[key];if(!e)return;const b=new Image();b.onload=()=>{box.innerHTML='';box.append(b);src.textContent=`${e.book}${e.page?', p. '+e.page:''}. Class use only.`;};b.src='./assets/reference-photos/book/'+e.file;};
+  own.onerror=()=>{const e=EXAMPLES[key];if(!e)return;const b=new Image();b.onload=()=>{box.innerHTML='';box.append(b);src.innerHTML=`Photo: ${e.url?`<a href="${e.url}" target="_blank" rel="noopener">${e.book}</a>`:e.book}${e.page?', p. '+e.page:''}. Educational use, cited.`;};b.src='./assets/reference-photos/book/'+e.file;};
   own.src=`./assets/reference-photos/${key}.jpg`;
 }
 function showCover(cover){
