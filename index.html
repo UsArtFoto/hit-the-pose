@@ -337,7 +337,7 @@ function meterStops(){
   return METER_FOOL; // Auto: the game sets it right
 }
 const trueErr=()=>meterStops()-METER_FOOL; // 0 = correct exposure
-const expScore=()=>{const e=Math.abs(trueErr());return e<=.17?100:Math.round(clamp(100-(e-.17)*60,0,100));};
+const expScore=()=>{const e=Math.abs(trueErr());return e<=.34?100:Math.round(clamp(100-(e-.34)*50,0,100));}; // Russ 2026-11-18: within 1/3 stop counts as right (was 1/6 stop, 60 points per stop)
 
 /* ================= movement (same as v5) ================= */
 function updateModel(now){
@@ -376,9 +376,9 @@ function buildRound(key){
 
 /* ================= scoring (pose from v5 + exposure) ================= */
 function groupErr(a,b){const o={};for(const g in GROUPS){let m=0;for(const k in GROUPS[g])m=Math.max(m,Math.abs(a[k]-b[k])/GROUPS[g][k]);o[g]=Math.min(m,1.5);}return o;}
-const LEVEL_TOL=()=>S.level<=3?.2:S.level<=6?.14:.1,LEVEL_SPAN=()=>S.level<=3?2.1:S.level<=6?1.8:1.5; // Russ: gentler in the first levels
+const LEVEL_TOL=()=>S.level<=3?.3:S.level<=6?.22:.15,LEVEL_SPAN=()=>S.level<=3?1.55:S.level<=6?1.4:1.25,FALL=1.15; // Russ 2026-11-18: more forgiving but fair: gentle on small timing misses, steeper on wrong poses (was linear, .2/.14/.1 and 2.1/1.8/1.5) // Russ: gentler in the first levels
 function scorePose(cap,tgt){const g=groupErr(cap,tgt),v=Object.values(g),worst=Math.max(...v),mean=v.reduce((a,b)=>a+b,0)/v.length,d=.6*worst+.4*mean,tol=LEVEL_TOL();
-  return{score:d<=tol?100:Math.round(clamp(100-(d-tol)/LEVEL_SPAN()*99,1,100)),g};}
+  return{score:d<=tol?100:Math.round(clamp(100-99*Math.pow((d-tol)/LEVEL_SPAN(),FALL),1,100)),g};}
 const WORKED={spine:'Spine long.',weight:'Weight on one leg.',shoulders:'Shoulder line set.',head:'Chin forward and down.',hands:'Hands placed with a reason.'};
 function fixLine(g,cap,t){
   switch(g){
@@ -629,14 +629,14 @@ function renderFlat(c,w,h){
   const j=joints2d(p,800);
   let L=1500*24/S.focal,vw=S.vert?L*2/3:L,vh=S.vert?L:L*2/3;const k=Math.min(1,1200/vh,1600/vw);vw*=k;vh*=k;
   const z=Math.pow((S.focal-24)/176,.8),cy=lerp(FLOOR-290,j.head.y+15,z),vx=clamp(800-vw/2,0,1600-vw),vy=clamp(cy-vh/2,0,1200-vh),sc=w/vw;
-  const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'#bfc0c3');g.addColorStop(1,'#d6d7d9');c.fillStyle=g;c.fillRect(0,0,w,h);
+  const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'#e3e4e6');g.addColorStop(1,'#f0f0f1');c.fillStyle=g;c.fillRect(0,0,w,h);
   c.save();c.setTransform(sc,0,0,sc,-vx*sc,-vy*sc);
-  c.fillStyle='#cdced0';c.fillRect(0,FLOOR-4,1600,400);
-  const sg=c.createRadialGradient(j.hip.x,FLOOR,4,j.hip.x,FLOOR,130);sg.addColorStop(0,'rgba(0,0,0,.28)');sg.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=sg;c.beginPath();c.ellipse(j.hip.x,FLOOR,130,18,0,0,7);c.fill();
+  c.fillStyle='#e6e6e8';c.fillRect(0,FLOOR-4,1600,400);
+  const sg=c.createRadialGradient(j.hip.x,FLOOR,4,j.hip.x,FLOOR,130);sg.addColorStop(0,'rgba(0,0,0,.2)');sg.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=sg;c.beginPath();c.ellipse(j.hip.x,FLOOR,130,18,0,0,7);c.fill();
   drawFigure(c,j);c.restore();
   const e=trueErr();
-  if(e>0){c.save();c.globalCompositeOperation='screen';c.fillStyle=`rgba(255,250,240,${clamp(1-Math.pow(.62,e),0,.9)})`;c.fillRect(0,0,w,h);c.restore();}
-  else if(e<0){c.fillStyle=`rgba(0,0,0,${clamp(1-Math.pow(.5,-e),0,.94)})`;c.fillRect(0,0,w,h);}
+  if(e>0){c.save();c.globalCompositeOperation='screen';c.fillStyle=`rgba(255,250,240,${clamp(1-Math.pow(.78,e),0,.8)})`;c.fillRect(0,0,w,h);c.restore();}
+  else if(e<0){c.fillStyle=`rgba(0,0,0,${clamp(1-Math.pow(.72,-e),0,.85)})`;c.fillRect(0,0,w,h);}
   FLAT_HEAD={x:(j.head.x-vx)*sc/w,y:(j.head.y-vy)*sc/h,s:sc};
 }
 function setFlat(v){S.flat=v;flatCv.style.display=v?'block':'none';glCanvas.style.visibility=v?'hidden':'visible';}
@@ -646,24 +646,24 @@ function drawHud(now){
   const c=hud,w=hudCv.width,h=hudCv.height,u=w/800; // u = scale unit
   c.clearRect(0,0,w,h);
   if(S.look&&S.phase!=='title'){c.font=`600 ${16*u}px "JetBrains Mono",monospace`;c.textAlign='center';c.textBaseline='top';c.fillStyle='#f0a83a';c.fillText('LOOKING OVER THE CAMERA',w/2,14*u);return;}
-  if(S.grid){c.strokeStyle='rgba(255,255,255,.2)';c.lineWidth=1;c.beginPath();for(let i=1;i<3;i++){c.moveTo(w*i/3,0);c.lineTo(w*i/3,h);c.moveTo(0,h*i/3);c.lineTo(w,h*i/3);}c.stroke();}
+  if(S.grid){c.strokeStyle='rgba(30,30,36,.16)';c.lineWidth=1;c.beginPath();for(let i=1;i<3;i++){c.moveTo(w*i/3,0);c.lineTo(w*i/3,h);c.moveTo(0,h*i/3);c.lineTo(w,h*i/3);}c.stroke();}
   if(S.phase==='shooting'&&(S.flat?FLAT_HEAD:bones.head)){
     const p=S.flat?{x:FLAT_HEAD.x*2-1,y:1-FLAT_HEAD.y*2}:bones.head.getWorldPosition(_a).project(cam),fx=(p.x+1)/2*w,fy=(1-p.y)/2*h+(S.flat?0:10*u),bw=90*u*(S.focal/50)**.6,bh=bw*1.15,l=14*u;
     c.strokeStyle='#86c98f';c.lineWidth=3*u;
     for(const [sx,sy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){const x=fx+sx*bw/2,y=fy+sy*bh/2;c.beginPath();c.moveTo(x-sx*l,y);c.lineTo(x,y);c.lineTo(x,y-sy*l);c.stroke();}
   }
   c.font=`600 ${18*u}px "JetBrains Mono",monospace`;c.textBaseline='top';
-  c.fillStyle='rgba(0,0,0,.5)';c.fillRect(0,0,w,44*u);c.fillStyle='#eeebe4';c.textAlign='left';
+  c.fillStyle='rgba(0,0,0,.34)';c.fillRect(0,0,w,44*u);c.fillStyle='#eeebe4';c.textAlign='left';
   const mode=camMode(),mtag={auto:'AUTO',av:'A',m:'M'}[mode];
   c.fillText(S.phase==='title'?'STANDBY':S.inCover?`COVER BONUS · ${mtag}`:`LV ${S.level} · ${mtag} · ${S.round+1}/${S.mode}`,14*u,12*u);
   if(S.phase!=='title'){
     c.textAlign='right';const t=Math.max(0,S.timeLeft);c.fillStyle=t<=5?'#e5483b':'#eeebe4';c.fillText(t.toFixed(1)+'s',w-14*u,12*u);
     c.fillStyle=S.phase==='shooting'?'#e5483b':'rgba(255,255,255,.22)';c.beginPath();c.arc(w-104*u,22*u,7*u,0,7);c.fill();
     const bw=Math.round(w*.22),bh=Math.round(bw*1.42),bx=w-bw-12*u,by=h-56*u-bh-12*u;
-    c.fillStyle='rgba(10,10,12,.75)';c.fillRect(bx-4*u,by-22*u,bw+8*u,bh+26*u);c.drawImage(cardCv,bx,by,bw,bh);
+    c.fillStyle='rgba(10,10,12,.55)';c.fillRect(bx-4*u,by-22*u,bw+8*u,bh+26*u);c.drawImage(cardCv,bx,by,bw,bh);
     c.textAlign='center';c.font=`600 ${11*u}px "JetBrains Mono",monospace`;c.fillStyle='#f0a83a';c.fillText('REFERENCE CARD',bx+bw/2,by-17*u);
   }
-  c.fillStyle='rgba(0,0,0,.62)';c.fillRect(0,h-56*u,w,56*u);
+  c.fillStyle='rgba(0,0,0,.42)';c.fillRect(0,h-56*u,w,56*u);
   c.font=`600 ${17*u}px "JetBrains Mono",monospace`;c.textBaseline='middle';c.textAlign='left';c.fillStyle='#eeebe4';
   const sh=mode==='m'?SHUTS[S.sh]:'1/250',ap=mode==='auto'?'F5.6':'F'+APS[S.ap],iso=mode==='m'?'ISO '+ISOS[S.iso]:'ISO A';
   c.fillText(`${sh}  ${ap}  ${iso}  ${S.focal}mm`,12*u,h-28*u);
@@ -729,7 +729,7 @@ function startRound(){
   $('bName').textContent=`Round ${S.round+1} of ${S.mode}: ${POSES[key].name}`;
   $('bTip').textContent=POSES[key].tip;
   $('sShots').textContent='1 shot this round';
-  $('sHint').textContent=mode==='auto'?'Auto exposure: just catch the pose.':mode==='av'?'Set exposure compensation, then catch the pose.':'Manual: set the exposure, then catch the pose.';
+  $('sHint').textContent=mode==='auto'?'Auto exposure: just catch the pose.':mode==='av'?'Tip: this light gray studio fools the meter. Dial in about +2/3, then catch the pose.':'Manual: set the exposure, then catch the pose.';
 }
 function snap(){
   if(S.phase!=='shooting')return;
@@ -854,7 +854,7 @@ function titleScreen(){
 }
 
 /* ================= start ================= */
-window.__htp={S,M,POSES,applyPose,snap,next,updateModel,get now(){return NOW;},renderer,scene,cam,review,drawCard,cardBig}; // test hook
+window.__htp={S,M,POSES,MISTAKES,groupErr,scorePose,applyPose,snap,next,updateModel,get now(){return NOW;},renderer,scene,cam,review,drawCard,cardBig}; // test hook
 setFlat(true);
 Promise.resolve().then(()=>{/* drawn figure only: no 3D files to load */$('loading').hidden=true;resize();titleScreen();requestAnimationFrame(frame);})
 .catch(err=>{
